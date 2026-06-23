@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CS Counter-Strafe Trainer</title>
+<style>
+  body { margin:0; font-family:Arial; background:#111; color:#0f0; text-align:center; }
+  canvas { border:3px solid #0f0; background:#000; image-rendering:pixelated; }
+  #info { margin:15px; font-size:18px; }
+  .good { color:#0f0; }
+  .bad { color:#f44; }
+</style>
+</head>
+<body>
+
+<h1>Counter-Strafe Trainer</h1>
+<div id="info">Press <b>A</b> or <b>D</b> to strafe • Counter-strafe to stop cleanly</div>
+<canvas id="game" width="800" height="400"></canvas>
+<div id="feedback" style="font-size:24px; margin:10px; min-height:30px;"></div>
+<button onclick="startTraining()">Start / Restart Training</button>
+
+<script>
+// Simple Counter-Strafe Trainer
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const feedback = document.getElementById('feedback');
+
+let x = 400, velocity = 0;
+let currentDirection = 0; // -1 left, 1 right, 0 stopped
+let score = 0, rounds = 0;
+let gameRunning = false;
+
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; handleInput(); });
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+function handleInput() {
+  if (!gameRunning) return;
+
+  let input = 0;
+  if (keys['a']) input -= 1;
+  if (keys['d']) input += 1;
+
+  // Simulate CS-like acceleration
+  velocity += input * 0.8;
+  velocity *= 0.85; // friction
+
+  x += velocity;
+  x = Math.max(50, Math.min(750, x));
+
+  // Detect good counter-strafe
+  if (Math.abs(velocity) < 1.5 && Math.abs(input) === 0 && Math.abs(velocity) > 0.3) {
+    if (rounds < 30) { // limit spam
+      score++;
+      rounds++;
+      feedback.innerHTML = `<span class="good">✅ PERFECT COUNTER-STRAFE! (+1)</span>`;
+      setTimeout(() => { if(gameRunning) feedback.textContent = ''; }, 800);
+    }
+  }
+}
+
+function draw() {
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Ground
+  ctx.fillStyle = '#333';
+  ctx.fillRect(0, 300, canvas.width, 100);
+
+  // Player
+  ctx.fillStyle = velocity === 0 ? '#0f0' : '#ff0';
+  ctx.fillRect(x-20, 250, 40, 60);
+
+  // Crosshair simulation (inaccuracy)
+  const spread = Math.min(25, Math.abs(velocity) * 3);
+  ctx.strokeStyle = '#0ff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, 180); ctx.lineTo(x, 220);
+  ctx.moveTo(x-20, 200); ctx.lineTo(x+20, 200);
+  ctx.stroke();
+
+  if (spread > 8) {
+    ctx.strokeStyle = 'rgba(255,100,100,0.6)';
+    ctx.beginPath();
+    ctx.arc(x, 200, spread, 0, Math.PI*2);
+    ctx.stroke();
+  }
+
+  // Stats
+  ctx.fillStyle = '#0f0';
+  ctx.font = '20px Arial';
+  ctx.fillText(`Score: ${score} | Round: ${rounds}`, 20, 40);
+  ctx.fillText(`Velocity: ${velocity.toFixed(1)}`, 20, 70);
+
+  requestAnimationFrame(draw);
+}
+
+function startTraining() {
+  x = 400;
+  velocity = 0;
+  score = 0;
+  rounds = 0;
+  gameRunning = true;
+  feedback.textContent = 'Go! Strafe and counter-strafe cleanly';
+}
+
+draw();
+</script>
+
+<p style="margin-top:30px; color:#888;">
+  Tip: Release the key then quickly tap the opposite one (classic counter-strafe).<br>
+  The green player + small crosshair = you're accurate!
+</p>
+
+</body>
+</html>
